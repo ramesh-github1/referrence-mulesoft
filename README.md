@@ -1,2 +1,2 @@
 # referrence-mulesoft
-demonstrate mule components with sample examples.
+demonstrate mule components with  examples.
