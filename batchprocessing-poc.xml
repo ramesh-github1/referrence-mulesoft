@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:tracking="http://www.mulesoft.org/schema/mule/ee/tracking" xmlns:batch="http://www.mulesoft.org/schema/mule/batch"
+	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:file="http://www.mulesoft.org/schema/mule/file" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/file http://www.mulesoft.org/schema/mule/file/current/mule-file.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/batch http://www.mulesoft.org/schema/mule/batch/current/mule-batch.xsd
+http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/mule/ee/tracking/current/mule-tracking-ee.xsd">
+	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="25a1773a-6597-4632-90f8-5ce8ddc4555c" >
+		<http:listener-connection host="0.0.0.0" port="8081" />
+	</http:listener-config>
+	<file:config name="File_Config" doc:name="File Config" doc:id="fa470219-4da4-4744-afa8-adef25b2ce7e" >
+		<file:connection workingDir="C:\Users\rv148\Desktop\temp\mule-file" />
+	</file:config>
+	<http:request-config name="HTTP_Request_configuration" doc:name="HTTP Request configuration" doc:id="89d2c952-fe55-4b5a-b8b0-c31dc54ae9ad" >
+		<http:request-connection host="localhost" port="8081" />
+	</http:request-config>
+	<flow name="batchprocessing-pocFlow" doc:id="09f48f16-4bf9-44a8-9dd2-1edccbfe52ba" >
+		<http:listener doc:name="GET /empDetails" doc:id="c66f0a85-0d3c-402c-94f3-c4551587c534" config-ref="HTTP_Listener_config" path="/empDetails"/>
+		<logger level="INFO" doc:name="Logger" doc:id="ade80375-151a-4840-b66a-c2ca03902b36" message="Get empDetails API started-........................."/>
+		<file:read doc:name="emp-details" doc:id="9d983e8f-e977-4f05-b0e2-9607a283cd51" config-ref="File_Config" path="C:\Users\rv148\Desktop\temp\mule-file\ip\emp-details.xlsx" outputMimeType="application/xlsx"/>
+		<logger level="INFO" doc:name="Logger" doc:id="f2337a42-a8db-4929-b863-c73e2293ad9c" message="successfully fetched the data.........................."/>
+		<ee:transform doc:name="Transform Message" doc:id="28adbb55-b0b0-4767-88ed-e5dbe9ced887" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/java
+---
+payload.Sheet1]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<batch:job jobName="batchprocessing-pocBatch_Job" doc:id="446000d4-2579-48e2-949b-9c2ac38a46fa" blockSize="10">
+			<batch:process-records >
+				<batch:step name="Batch_Step" doc:id="bf5a1ceb-62e3-4bd1-bcae-7e2414ce0db7" >
+					<logger level="INFO" doc:name="Logger" doc:id="3006599b-81e9-43b8-bc19-61c8fb0ff652" message="Inside Batch Step " />
+					<batch:aggregator doc:name="Batch Aggregator" doc:id="8fc4eafb-0722-472d-b479-8fb1dbae972d" size="5">
+						<ee:transform doc:name="Transform Message" doc:id="0dc9b7d8-855d-41df-bb56-0f93d23ccbb6">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+						<logger level="INFO" doc:name="Logger" doc:id="580b7841-a77d-425e-9094-5b021dc10453" message="Inside Batch Aggregator"/>
+						<logger level="INFO" doc:name="Logger" doc:id="de7ae0e1-afdf-46b5-b1ba-8e194f4cd564" message="calling post data API"/>
+						<http:request method="POST" doc:name="Request" doc:id="73e97e87-97aa-4cd5-b167-bea535bdd7ec" config-ref="HTTP_Request_configuration" path="/data" />
+						<logger level="INFO" doc:name="Logger" doc:id="36cf6054-65f2-4cb8-bf04-1d4e8f5194f3" message="returning after posting the datat to postData API............."/>
+					</batch:aggregator>
+				</batch:step>
+			</batch:process-records>
+		</batch:job>
+		<set-payload value="data successfully fetched and posted..........................................." doc:name="Set Payload" doc:id="28778b2d-a650-4a70-a512-a676f77013e7" />
+	</flow>
+	<flow name="postData" doc:id="fe04abff-51cd-4077-956d-daa9220b9b5a" >
+		<http:listener doc:name="POST /data" doc:id="fbc2709b-68d5-4316-8e0e-815e17dd329d" config-ref="HTTP_Listener_config" path="/data" allowedMethods="POST"/>
+		<file:write doc:name="Write" doc:id="d918d111-709c-4b3c-a4da-366a401af019" config-ref="File_Config" path="C:\Users\rv148\Desktop\temp\mule-file\op\output-empdetails.txt">
+		</file:write>
+	</flow>
+</mule>
